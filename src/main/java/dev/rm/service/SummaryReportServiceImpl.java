@@ -1,9 +1,9 @@
 package dev.rm.service;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class SummaryReportServiceImpl implements SummaryReportService {
+
+    private final S3Service s3Service;
 
     private final SummaryReportRepository summaryReportRepository;
     private final ObjectMapper objectMapper;
@@ -54,13 +56,10 @@ public class SummaryReportServiceImpl implements SummaryReportService {
         String formattedDate = sdf.format(new Date());
         String fileName = "vs_sum_" + formattedDate + ".json";
 
-        // String fileName = "vs_sum_" + System.currentTimeMillis() + ".json";
-        Path filePath = Paths.get("reports", fileName);
-
         try {
-            Files.createDirectories(filePath.getParent());
-            Files.write(filePath, jsonReport.getBytes());
-            log.info("Summary report saved: {}", filePath.toAbsolutePath());
+            InputStream inputStream = new ByteArrayInputStream(jsonReport.getBytes(StandardCharsets.UTF_8));
+            s3Service.uploadReport(fileName, inputStream);
+            log.info("Summary report saved to S3: {}", fileName);
 
             saveReportMetadata(fileName);
         } catch (IOException e) {
